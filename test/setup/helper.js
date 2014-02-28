@@ -13,7 +13,7 @@ function MockAPI(options){
 	this.password = options.password || 'password';
 	this.apiUser = options.apiUser || 'api_user';
 	this.apiKey = options.apiKey || 'api_key';
-	this.mockToken = options.mockToken || 'mock_auth_token'; 
+	this.mock_auth_token = options.mock_auth_token || 'mock_auth_token';
 	this._nock = nock(this.baseUrl());
 }
 
@@ -35,7 +35,7 @@ MockAPI.prototype.baseUrl = function(){
 MockAPI.prototype.authResponse = function(){
 	return {
 		language: 'en',
-			auth_token: this.mockToken,
+			auth_token: this.mock_auth_token,
 			username: this.username
 	};
 };

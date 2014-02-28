@@ -1,11 +1,15 @@
-require('should');
+var should = require('should');
+var nock = require('nock');
+var MockApi = require('../setup/helper')
 var Api = require('./../../lib/index');
-var credentials = require('./credentials.json');
+var credentials = require('../setup/credentials.json');
+
+var mockApi = new MockApi(credentials);
 
 /*
  * Create a new API instance
  */
-var api = new Api(credentials.apiuser, credentials.apikey);
+var api = new Api(credentials.apiUser, credentials.apiKey);
 
 /*
  * Reference values
@@ -18,8 +22,12 @@ var authenticatedCustomer;
  */
 describe('API', function() {
 
-	it('should authenticate', function(done) {
-		api.auth(credentials.username, credentials.password, function(err, customer) {
+  // get a customer
+	beforeEach(function(done) {
+    mockApi.mockAuth();
+
+		api.auth(credentials.username, credentials.password, function(err, customer, res) {
+      should.not.exist(err);
 			customer.should.have.property('username', credentials.username);
 			authenticatedCustomer = customer;
 			done();
@@ -28,6 +36,7 @@ describe('API', function() {
 
 	it('should get categories', function(done) {
 		api.categories(function(err, categories) {
+      should.not.exist(err);
 			categories.should.be.instanceof(Array);
 			categories.should.have.lengthOf(26);
 			done();
@@ -110,5 +119,35 @@ describe('API', function() {
 			done();
 		});
 	});
+
+  it("should license a video", function(done) {
+    nock(mockApi.baseUrl())
+      .get('/customers/user_name/subscriptions.json?auth_token=mock_auth_token')
+      .reply(200, [
+        {
+          site: 'photo',
+          is_active: true,
+          id: 'sub_id_goes_here',
+          sizesForLicensing: ['big', 'small']
+        }
+      ])
+
+    nock(mockApi.baseUrl())
+      .post('/subscriptions/sub_id_goes_here/video/vid_id/sizes/big.json')
+      .reply(200, {
+        download: {url: 'foo.com/downloadurl'},
+        thumb_large: {url: 'foo.com/thumb_largeurl'},
+        allotmentCharge: '9001'
+      })
+
+    authenticatedCustomer.licenseVideo('vid_id', {size: 'big'}, function(err, video, res) {
+      should.not.exist(err);
+      video.should.have.property('downloadUrl', 'foo.com/downloadurl')
+      video.should.have.property('thumbUrl', 'foo.com/thumb_largeurl')
+      video.should.have.property('type', 'video')
+      video.should.have.property('allotmentCharge', '9001')
+      done();
+    });
+  });
 
 });
